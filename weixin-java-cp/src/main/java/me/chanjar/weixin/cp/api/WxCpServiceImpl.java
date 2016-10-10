@@ -1,28 +1,7 @@
 package me.chanjar.weixin.cp.api;
 
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.List;
-import java.util.UUID;
-
-import org.apache.http.HttpHost;
-import org.apache.http.client.ClientProtocolException;
-import org.apache.http.client.config.RequestConfig;
-import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.impl.client.BasicResponseHandler;
-import org.apache.http.impl.client.CloseableHttpClient;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
-import com.google.gson.JsonPrimitive;
+import com.google.gson.*;
 import com.google.gson.reflect.TypeToken;
-
 import me.chanjar.weixin.common.bean.WxAccessToken;
 import me.chanjar.weixin.common.bean.WxJsapiSignature;
 import me.chanjar.weixin.common.bean.menu.WxMenu;
@@ -36,20 +15,28 @@ import me.chanjar.weixin.common.util.RandomUtils;
 import me.chanjar.weixin.common.util.StringUtils;
 import me.chanjar.weixin.common.util.crypto.SHA1;
 import me.chanjar.weixin.common.util.fs.FileUtils;
-import me.chanjar.weixin.common.util.http.ApacheHttpClientBuilder;
-import me.chanjar.weixin.common.util.http.DefaultApacheHttpClientBuilder;
-import me.chanjar.weixin.common.util.http.MediaDownloadRequestExecutor;
-import me.chanjar.weixin.common.util.http.MediaUploadRequestExecutor;
-import me.chanjar.weixin.common.util.http.RequestExecutor;
-import me.chanjar.weixin.common.util.http.SimpleGetRequestExecutor;
-import me.chanjar.weixin.common.util.http.SimplePostRequestExecutor;
-import me.chanjar.weixin.common.util.http.URIUtil;
+import me.chanjar.weixin.common.util.http.*;
 import me.chanjar.weixin.common.util.json.GsonHelper;
 import me.chanjar.weixin.cp.bean.WxCpDepart;
 import me.chanjar.weixin.cp.bean.WxCpMessage;
 import me.chanjar.weixin.cp.bean.WxCpTag;
 import me.chanjar.weixin.cp.bean.WxCpUser;
 import me.chanjar.weixin.cp.util.json.WxCpGsonBuilder;
+import org.apache.http.HttpHost;
+import org.apache.http.client.ClientProtocolException;
+import org.apache.http.client.config.RequestConfig;
+import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.impl.client.BasicResponseHandler;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.List;
+import java.util.UUID;
 
 public class WxCpServiceImpl implements WxCpService {
 
@@ -82,7 +69,7 @@ public class WxCpServiceImpl implements WxCpService {
   public boolean checkSignature(String msgSignature, String timestamp, String nonce, String data) {
     try {
       return SHA1.gen(this.configStorage.getToken(), timestamp, nonce, data)
-          .equals(msgSignature);
+        .equals(msgSignature);
     } catch (Exception e) {
       return false;
     }
@@ -108,18 +95,18 @@ public class WxCpServiceImpl implements WxCpService {
       synchronized (this.globalAccessTokenRefreshLock) {
         if (this.configStorage.isAccessTokenExpired()) {
           String url = "https://qyapi.weixin.qq.com/cgi-bin/gettoken?"
- + "&corpid=" + this.configStorage.getCorpId()
-              + "&corpsecret=" + this.configStorage.getCorpSecret();
+            + "&corpid=" + this.configStorage.getCorpId()
+            + "&corpsecret=" + this.configStorage.getCorpSecret();
           try {
             HttpGet httpGet = new HttpGet(url);
             if (this.httpProxy != null) {
               RequestConfig config = RequestConfig.custom()
-                  .setProxy(this.httpProxy).build();
+                .setProxy(this.httpProxy).build();
               httpGet.setConfig(config);
             }
             String resultContent = null;
             try (CloseableHttpClient httpclient = getHttpclient();
-                CloseableHttpResponse response = httpclient.execute(httpGet)) {
+                 CloseableHttpResponse response = httpclient.execute(httpGet)) {
               resultContent = new BasicResponseHandler().handleResponse(response);
             } finally {
               httpGet.releaseConnection();
@@ -130,7 +117,7 @@ public class WxCpServiceImpl implements WxCpService {
             }
             WxAccessToken accessToken = WxAccessToken.fromJson(resultContent);
             this.configStorage.updateAccessToken(
-                accessToken.getAccessToken(), accessToken.getExpiresIn());
+              accessToken.getAccessToken(), accessToken.getExpiresIn());
           } catch (ClientProtocolException e) {
             throw new RuntimeException(e);
           } catch (IOException e) {
@@ -162,7 +149,7 @@ public class WxCpServiceImpl implements WxCpService {
           String jsapiTicket = tmpJsonObject.get("ticket").getAsString();
           int expiresInSeconds = tmpJsonObject.get("expires_in").getAsInt();
           this.configStorage.updateJsapiTicket(jsapiTicket,
-              expiresInSeconds);
+            expiresInSeconds);
         }
       }
     }
@@ -175,20 +162,20 @@ public class WxCpServiceImpl implements WxCpService {
     String noncestr = RandomUtils.getRandomStr();
     String jsapiTicket = getJsapiTicket(false);
     String signature = SHA1.genWithAmple(
-            "jsapi_ticket=" + jsapiTicket,
-            "noncestr=" + noncestr,
-            "timestamp=" + timestamp,
-            "url=" + url
+      "jsapi_ticket=" + jsapiTicket,
+      "noncestr=" + noncestr,
+      "timestamp=" + timestamp,
+      "url=" + url
     );
     WxJsapiSignature jsapiSignature = new WxJsapiSignature();
     jsapiSignature.setTimestamp(timestamp);
     jsapiSignature.setNoncestr(noncestr);
     jsapiSignature.setUrl(url);
     jsapiSignature.setSignature(signature);
-    
+
     // Fixed bug
     jsapiSignature.setAppid(this.configStorage.getCorpId());
-    
+
     return jsapiSignature;
   }
 
@@ -199,6 +186,12 @@ public class WxCpServiceImpl implements WxCpService {
   }
 
   @Override
+  public String messageSendhasResult(WxCpMessage message) throws WxErrorException {
+    String url = "https://qyapi.weixin.qq.com/cgi-bin/message/send";
+    return post(url, message.toJson());
+  }
+
+  @Override
   public void menuCreate(WxMenu menu) throws WxErrorException {
     menuCreate(this.configStorage.getAgentId(), menu);
   }
@@ -206,7 +199,7 @@ public class WxCpServiceImpl implements WxCpService {
   @Override
   public void menuCreate(String agentId, WxMenu menu) throws WxErrorException {
     String url = "https://qyapi.weixin.qq.com/cgi-bin/menu/create?agentid="
- + this.configStorage.getAgentId();
+      + this.configStorage.getAgentId();
     post(url, menu.toJson());
   }
 
@@ -243,7 +236,7 @@ public class WxCpServiceImpl implements WxCpService {
 
   @Override
   public WxMediaUploadResult mediaUpload(String mediaType, String fileType, InputStream inputStream)
-          throws WxErrorException, IOException {
+    throws WxErrorException, IOException {
     return mediaUpload(mediaType, FileUtils.createTmpFile(inputStream, UUID.randomUUID().toString(), fileType));
   }
 
@@ -257,9 +250,9 @@ public class WxCpServiceImpl implements WxCpService {
   public File mediaDownload(String media_id) throws WxErrorException {
     String url = "https://qyapi.weixin.qq.com/cgi-bin/media/get";
     return execute(
-        new MediaDownloadRequestExecutor(
-this.configStorage.getTmpDirFile()),
-        url, "media_id=" + media_id);
+      new MediaDownloadRequestExecutor(
+        this.configStorage.getTmpDirFile()),
+      url, "media_id=" + media_id);
   }
 
 
@@ -267,9 +260,9 @@ this.configStorage.getTmpDirFile()),
   public Integer departCreate(WxCpDepart depart) throws WxErrorException {
     String url = "https://qyapi.weixin.qq.com/cgi-bin/department/create";
     String responseContent = execute(
-            new SimplePostRequestExecutor(),
-            url,
-            depart.toJson());
+      new SimplePostRequestExecutor(),
+      url,
+      depart.toJson());
     JsonElement tmpJsonElement = new JsonParser().parse(responseContent);
     return GsonHelper.getAsInteger(tmpJsonElement.getAsJsonObject().get("id"));
   }
@@ -296,11 +289,11 @@ this.configStorage.getTmpDirFile()),
      */
     JsonElement tmpJsonElement = new JsonParser().parse(responseContent);
     return WxCpGsonBuilder.INSTANCE.create()
-            .fromJson(
-                    tmpJsonElement.getAsJsonObject().get("department"),
-                    new TypeToken<List<WxCpDepart>>() {
-                    }.getType()
-            );
+      .fromJson(
+        tmpJsonElement.getAsJsonObject().get("department"),
+        new TypeToken<List<WxCpDepart>>() {
+        }.getType()
+      );
   }
 
   @Override
@@ -356,11 +349,11 @@ this.configStorage.getTmpDirFile()),
     String responseContent = get(url, params);
     JsonElement tmpJsonElement = new JsonParser().parse(responseContent);
     return WxCpGsonBuilder.INSTANCE.create()
-            .fromJson(
-                    tmpJsonElement.getAsJsonObject().get("userlist"),
-                    new TypeToken<List<WxCpUser>>() {
-                    }.getType()
-            );
+      .fromJson(
+        tmpJsonElement.getAsJsonObject().get("userlist"),
+        new TypeToken<List<WxCpUser>>() {
+        }.getType()
+      );
   }
 
   @Override
@@ -379,11 +372,11 @@ this.configStorage.getTmpDirFile()),
     String responseContent = get(url, params);
     JsonElement tmpJsonElement = new JsonParser().parse(responseContent);
     return WxCpGsonBuilder.INSTANCE.create()
-            .fromJson(
-                    tmpJsonElement.getAsJsonObject().get("userlist"),
-                    new TypeToken<List<WxCpUser>>() {
-                    }.getType()
-            );
+      .fromJson(
+        tmpJsonElement.getAsJsonObject().get("userlist"),
+        new TypeToken<List<WxCpUser>>() {
+        }.getType()
+      );
   }
 
   @Override
@@ -417,11 +410,11 @@ this.configStorage.getTmpDirFile()),
     String responseContent = get(url, null);
     JsonElement tmpJsonElement = new JsonParser().parse(responseContent);
     return WxCpGsonBuilder.INSTANCE.create()
-            .fromJson(
-                    tmpJsonElement.getAsJsonObject().get("taglist"),
-                    new TypeToken<List<WxCpTag>>() {
-                    }.getType()
-            );
+      .fromJson(
+        tmpJsonElement.getAsJsonObject().get("taglist"),
+        new TypeToken<List<WxCpTag>>() {
+        }.getType()
+      );
   }
 
   @Override
@@ -430,11 +423,11 @@ this.configStorage.getTmpDirFile()),
     String responseContent = get(url, null);
     JsonElement tmpJsonElement = new JsonParser().parse(responseContent);
     return WxCpGsonBuilder.INSTANCE.create()
-            .fromJson(
-                    tmpJsonElement.getAsJsonObject().get("userlist"),
-                    new TypeToken<List<WxCpUser>>() {
-                    }.getType()
-            );
+      .fromJson(
+        tmpJsonElement.getAsJsonObject().get("userlist"),
+        new TypeToken<List<WxCpUser>>() {
+        }.getType()
+      );
   }
 
   @Override
@@ -473,14 +466,14 @@ this.configStorage.getTmpDirFile()),
   }
 
   @Override
-	public String oauth2buildAuthorizationUrl(String state) {
-  	return this.oauth2buildAuthorizationUrl(
-this.configStorage.getOauth2redirectUri(),
-  		state
-  	);
-	}
+  public String oauth2buildAuthorizationUrl(String state) {
+    return this.oauth2buildAuthorizationUrl(
+      this.configStorage.getOauth2redirectUri(),
+      state
+    );
+  }
 
-	@Override
+  @Override
   public String oauth2buildAuthorizationUrl(String redirectUri, String state) {
     String url = "https://open.weixin.qq.com/connect/oauth2/authorize?";
     url += "appid=" + this.configStorage.getCorpId();
@@ -502,8 +495,8 @@ this.configStorage.getOauth2redirectUri(),
   @Override
   public String[] oauth2getUserInfo(String agentId, String code) throws WxErrorException {
     String url = "https://qyapi.weixin.qq.com/cgi-bin/user/getuserinfo?"
-            + "code=" + code
-            + "&agendid=" + agentId;
+      + "code=" + code
+      + "&agendid=" + agentId;
     String responseText = get(url, null);
     JsonElement je = new JsonParser().parse(responseText);
     JsonObject jo = je.getAsJsonObject();
@@ -564,7 +557,7 @@ this.configStorage.getOauth2redirectUri(),
           int sleepMillis = this.retrySleepMillis * (1 << retryTimes);
           try {
             this.log.debug("微信系统繁忙，{}ms 后重试(第{}次)", sleepMillis,
-                retryTimes + 1);
+              retryTimes + 1);
             Thread.sleep(sleepMillis);
           } catch (InterruptedException e1) {
             throw new RuntimeException(e1);
@@ -589,7 +582,7 @@ this.configStorage.getOauth2redirectUri(),
 
     try {
       return executor.execute(getHttpclient(), this.httpProxy,
-          uriWithAccessToken, data);
+        uriWithAccessToken, data);
     } catch (WxErrorException e) {
       WxError error = e.getError();
       /*
@@ -621,15 +614,15 @@ this.configStorage.getOauth2redirectUri(),
   public void setWxCpConfigStorage(WxCpConfigStorage wxConfigProvider) {
     this.configStorage = wxConfigProvider;
     ApacheHttpClientBuilder apacheHttpClientBuilder = this.configStorage
-        .getApacheHttpClientBuilder();
+      .getApacheHttpClientBuilder();
     if (null == apacheHttpClientBuilder) {
       apacheHttpClientBuilder = DefaultApacheHttpClientBuilder.get();
     }
 
     apacheHttpClientBuilder.httpProxyHost(this.configStorage.getHttpProxyHost())
-        .httpProxyPort(this.configStorage.getHttpProxyPort())
-        .httpProxyUsername(this.configStorage.getHttpProxyUsername())
-        .httpProxyPassword(this.configStorage.getHttpProxyPassword());
+      .httpProxyPort(this.configStorage.getHttpProxyPort())
+      .httpProxyUsername(this.configStorage.getHttpProxyUsername())
+      .httpProxyPassword(this.configStorage.getHttpProxyPassword());
 
     if (this.configStorage.getHttpProxyHost() != null && this.configStorage.getHttpProxyPort() > 0) {
       this.httpProxy = new HttpHost(this.configStorage.getHttpProxyHost(), this.configStorage.getHttpProxyPort());

@@ -116,7 +116,7 @@ public interface WxCpService {
    * @throws WxErrorException
    */
   WxMediaUploadResult mediaUpload(String mediaType, String fileType, InputStream inputStream)
-          throws WxErrorException, IOException;
+    throws WxErrorException, IOException;
 
   /**
    * @param mediaType
@@ -163,6 +163,16 @@ public interface WxCpService {
    * @see #menuCreate(String, me.chanjar.weixin.common.bean.menu.WxMenu)
    */
   void menuCreate(WxMenu menu) throws WxErrorException;
+
+
+  /**
+   * 发送消息，返回执行结果
+   *
+   * @param message 消息内容
+   * @return
+   * @throws WxErrorException
+   */
+  String messageSendhasResult(WxCpMessage message) throws WxErrorException;
 
   /**
    * <pre>
@@ -393,15 +403,15 @@ public interface WxCpService {
   void tagAddUsers(String tagId, List<String> userIds, List<String> partyIds) throws WxErrorException;
 
   /**
-   *  <pre>
+   * <pre>
    * 构造oauth2授权的url连接
    * </pre>
-   * 
+   *
    * @param state
    * @return url
    */
   String oauth2buildAuthorizationUrl(String state);
-  
+
   /**
    * <pre>
    * 构造oauth2授权的url连接
